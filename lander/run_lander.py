@@ -1,11 +1,12 @@
 import gym
 
 from stable_baselines import DQN
+from stable_baselines import PPO2
 from stable_baselines.common.evaluation import evaluate_policy
 
 env = gym.make('LunarLander-v2')
 # Load the trained agent
-model = DQN.load("lunar_lander")
+model = PPO2.load("lunar_lander")
 
 # Evaluate the agent
 # mean_reward, std_reward = evaluate_policy(

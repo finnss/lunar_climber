@@ -13,7 +13,7 @@ def train():
     env = LunarLander()
 
     # Instantiate the agent
-    model = DQN('MlpPolicy', env, learning_rate=0.01,
+    model = PPO2('MlpPolicy', env, learning_rate=0.001,
                 # prioritized_replay=True,
                 verbose=1)
 
