@@ -1,0 +1,20 @@
+gym
+stable-baselines
+tensorflow==1.15.0
+# PySimpleGUI
+# python-chess
+Pyperclip
+Box2D
+pygame==2.0.0.dev10
+scikit-image>=0.16.2
+numpy>=1.18.0
+pymunk>=5.6.0
+gym[box2d]>=0.17.2
+rlcard >= 0.2.1
+pynput
+opencv-python
+box2d-py
+# python-shogi
+# hanabi_learning_environment
+# multi_agent_ale_py
+# magent
