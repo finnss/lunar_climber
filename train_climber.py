@@ -23,7 +23,7 @@ def train():
     timesteps = os.environ.get('TIMESTEPS')
     timesteps = int(float(timesteps)) if timesteps is not None else 1e6
     print('timesteps %s' % timesteps)
-    model.learn(total_timesteps=int(1e6), log_interval=10)
+    model.learn(total_timesteps=int(timesteps), log_interval=10)
     # Save the agent
     model.save("trained_models/latest")
 

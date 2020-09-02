@@ -17,7 +17,8 @@ RUN pip install -r ./requirements.txt
 RUN pip3 install sagemaker-training
 
 # Run the specified command within the container.
-CMD TIMESTEPS=1e2 python ./main.py
+ENV TIMESTEPS 1e3
+CMD python ./train_climber.py
 # ENV TIMESTEPS 1e5
 # ENV SAGEMAKER_PROGRAM ./train_climber.py
 
