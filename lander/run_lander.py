@@ -5,7 +5,7 @@ from stable_baselines.common.evaluation import evaluate_policy
 
 env = gym.make('LunarLander-v2')
 # Load the trained agent
-model = DQN.load("dqn_lunar")
+model = DQN.load("lunar_lander")
 
 # Evaluate the agent
 # mean_reward, std_reward = evaluate_policy(

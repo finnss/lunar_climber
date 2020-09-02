@@ -18,5 +18,5 @@ RUN pip3 install sagemaker-training
 
 # Run the specified command within the container.
 # CMD python ./main.py
-ENV SAGEMAKER_PROGRAM ./main.py
+ENV SAGEMAKER_PROGRAM ./train_climber.py
 
