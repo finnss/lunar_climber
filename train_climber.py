@@ -1,6 +1,6 @@
 # from gym.gym.envs.box2d.lunar_lander import LunarLander
 from custom_env.lunar_climber_env import LunarLander
-
+import gym
 from stable_baselines import DQN
 from stable_baselines import PPO2
 from stable_baselines.common.evaluation import evaluate_policy
@@ -10,11 +10,12 @@ import os
 print(os.environ)
 
 def train():
-    env = LunarLander()
+    # env = LunarLander()
+    env = gym.make('LunarLander-v2')
 
     # Instantiate the agent
-    model = PPO2('MlpPolicy', env, learning_rate=0.001,
-                # prioritized_replay=True,
+    model = DQN('MlpPolicy', env, learning_rate=0.001,
+                prioritized_replay=True,
                 verbose=1)
 
     mean_reward, std_reward = evaluate_policy(
