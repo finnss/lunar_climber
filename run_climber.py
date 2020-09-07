@@ -9,8 +9,8 @@ from stable_baselines.common.evaluation import evaluate_policy
 def run():
     env = LunarLander()
     # Load the trained agent
-    # model = PPO2.load("trained_models/latest")
-    model = DQN.load("trained_models/lunar_climber-2020-09-02_11-23-00")
+    model = DQN.load("trained_models/latest")
+    # model = DQN.load("trained_models/good_climber_equal_weights")
 
     # mean_reward, std_reward = evaluate_policy(
     #     model, env, n_eval_episodes=10)

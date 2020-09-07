@@ -381,23 +381,24 @@ class LunarLander(gym.Env, EzPickle):
         if success and self.landed:
             print('Success!')
             done = True
-            reward += 200
+            reward += 1000
         # print()
         # Fail if the lander lands outside success zone.
         # This is questionable - being able to recover after landing might be useful. Makes training faster.
         elif self.landed:
             # print('Landed')
+            reward -= 500
             done = True
         elif pos.x < 0 or pos.x > 35 or pos.y > 35:  # Out of bounds
             done = True
             # print('Out of bounds')
-            reward -= 100
+            reward -= 500
         elif self.game_over:  # Flipped
             done = True
             # print('Flipped')
-            reward -= 100
+            reward -= 500
         elif self.episode_step_count > 25 * 60:
-            reward -= 100
+            reward -= 500
             # print('Timeout')
             done = True
         else:
