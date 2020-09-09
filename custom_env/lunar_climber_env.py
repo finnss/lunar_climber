@@ -387,18 +387,18 @@ class LunarLander(gym.Env, EzPickle):
         # This is questionable - being able to recover after landing might be useful. Makes training faster.
         elif self.landed:
             # print('Landed')
-            reward -= 500
+            reward -= 50
             done = True
         elif pos.x < 0 or pos.x > 35 or pos.y > 35:  # Out of bounds
             done = True
             # print('Out of bounds')
-            reward -= 500
+            reward -= 100
         elif self.game_over:  # Flipped
             done = True
             # print('Flipped')
-            reward -= 500
+            reward -= 100
         elif self.episode_step_count > 25 * 60:
-            reward -= 500
+            reward -= 100
             # print('Timeout')
             done = True
         else:

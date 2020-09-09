@@ -1,6 +1,5 @@
 # Use the official image as a parent image.
-FROM nvidia/cuda:10.2-base
-# CMD nvidia-smi
+FROM python:3.6-slim
 
 # Set the working directory.
 WORKDIR /opt/ml/code/
@@ -11,16 +10,14 @@ COPY . .
 # Run the command inside your image filesystem.
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
-    python3.6 python3-pip python3-setuptools python3-dev \
-    gcc swig libgl1-mesa-glx libglib2.0-0 && \
+    gcc swig python3-dev libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade pip setuptools
 RUN pip3 install -r ./requirements.txt
 RUN pip3 install sagemaker-training
 
 # Run the specified command within the container.
-ENV TIMESTEPS 1e5
+ENV TIMESTEPS 1e6
 # CMD python ./train_climber.py
 # ENV TIMESTEPS 1e5
 ENV SAGEMAKER_PROGRAM ./train_climber.py

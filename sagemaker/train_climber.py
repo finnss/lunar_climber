@@ -1,5 +1,5 @@
 # from gym.gym.envs.box2d.lunar_lander import LunarLander
-# from custom_env.lunar_climber_env import LunarLander
+from custom_env.lunar_climber_env import LunarLander
 import gym
 from stable_baselines import DQN
 from stable_baselines import PPO2
@@ -7,16 +7,16 @@ from stable_baselines.common.evaluation import evaluate_policy
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
-print(os.environ)
+
 
 def train():
-    # env = LunarLander()
-    env = gym.make('LunarLander-v2')
+    env = LunarLander()
+    # env = gym.make('LunarLander-v2')
 
     # Instantiate the agent
-    model = DQN('MlpPolicy', env, learning_rate=0.001,
-                prioritized_replay=True,
-                verbose=1)
+    model = PPO2('MlpPolicy', env, learning_rate=0.001,
+                 # prioritized_replay=True,
+                 verbose=1)
 
     mean_reward, std_reward = evaluate_policy(
         model, model.get_env(), n_eval_episodes=10)
@@ -32,7 +32,7 @@ def train():
     dt_string = now.strftime("%Y-%m-%d_%H-%M-%S")
     # model.save("trained_models/lunar_climber-%s" % dt_string)
     model.save("/opt/ml/model/lunar_climber-%s" % dt_string)
-    
+
     # Plot training progress
     # plt.plot(env.all_rewards)
     # plt.ylabel('Reward')
