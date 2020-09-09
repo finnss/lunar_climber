@@ -8,7 +8,7 @@ Based on the Stable Baselines Lunar Lander example: https://stable-baselines.rea
 
 ### Relevant files
 
-The relevant files are mainly `train_climber.py`, `run_climber`, and `custom_end/lunar_climber_env.py`. The rest can be ignored relatively safely, including folders.
+The relevant files are mainly `train_climber.py`, `run_climber`, and `custom_env/lunar_climber_env.py`. The rest can be ignored relatively safely, including folders.
 
 ### GPU
 
