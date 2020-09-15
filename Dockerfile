@@ -2,20 +2,21 @@
 FROM python:3.6-slim
 
 # Set the working directory.
-WORKDIR /opt/ml/code/
+# WORKDIR /opt/ml/code/
 
 # Copy the file from your host to your current location.
 COPY . .
 
 # Run the command inside your image filesystem.
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y gcc swig libgl1-mesa-glx libglib2.0-0 && \
+    apt-get install --no-install-recommends -y \
+    gcc swig python3-dev libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -r ./requirements.txt
-RUN pip install sagemaker-training
+RUN pip3 install sagemaker-training
 
 # Run the specified command within the container.
-# CMD python ./main.py
-ENV SAGEMAKER_PROGRAM ./main.py
-
+# CMD python ./train_climber.py
+# ENV TIMESTEPS 1e5
+CMD python ./train_climber.py

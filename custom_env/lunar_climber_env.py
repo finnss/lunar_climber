@@ -396,6 +396,10 @@ class LunarLander(gym.Env, EzPickle):
         raw_y_reward = AXIS_REWARD_MAX - normalized_distance_y ** 2
         y_reward += raw_y_reward * Y_REWARD_FACTOR
 
+        whole_second = self.episode_step_count % 60 == 0
+        if whole_second:
+            print('Y dist: %s, reward: %s', (pos.y - self.helipad_y, y_reward))
+
         reward = shaping_reward - boost_reward + x_reward + y_reward
 
         done = False
@@ -406,7 +410,6 @@ class LunarLander(gym.Env, EzPickle):
         failed = self.game_over or out_of_bounds or timeout
 
         is_within_flags = pos.x > self.helipad_x1 and pos.x < self.helipad_x2
-        whole_second = self.episode_step_count % 60 == 0
 
         if failed:
             done = True
