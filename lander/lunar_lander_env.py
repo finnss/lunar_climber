@@ -46,14 +46,6 @@ SIDE_ENGINE_POWER = 0.6
 
 INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
-INITIAL_X_POS = 8
-INITIAL_Y_POS = 8
-
-X_REWARD_FACTOR = 30
-Y_REWARD_FACTOR = 20
-
-AXIS_REWARD_MAX = 10
-
 LANDER_POLY = [
     (-14, +17), (-17, 0), (-17, -10),
     (+17, -10), (+17, 0), (+14, +17)
@@ -66,8 +58,8 @@ LEG_SPRING_TORQUE = 40
 SIDE_ENGINE_HEIGHT = 14.0
 SIDE_ENGINE_AWAY = 12.0
 
-VIEWPORT_W = 1200
-VIEWPORT_H = 800
+VIEWPORT_W = 600
+VIEWPORT_H = 400
 
 
 class ContactDetector(contactListener):
@@ -76,16 +68,11 @@ class ContactDetector(contactListener):
         self.env = env
 
     def BeginContact(self, contact):
+        if self.env.lander == contact.fixtureA.body or self.env.lander == contact.fixtureB.body:
+            self.env.game_over = True
         for i in range(2):
             if self.env.legs[i] in [contact.fixtureA.body, contact.fixtureB.body]:
                 self.env.legs[i].ground_contact = True
-        if self.env.lander == contact.fixtureA.body or self.env.lander == contact.fixtureB.body:
-            if self.env.legs[0].ground_contact and self.env.legs[1].ground_contact:
-                self.env.landed = True
-                # print('Landed!')
-            else:
-                # print('Body contact!')
-                self.env.game_over = True
 
     def EndContact(self, contact):
         for i in range(2):
@@ -112,10 +99,6 @@ class LunarLander(gym.Env, EzPickle):
         self.particles = []
 
         self.prev_reward = None
-        self.previ_reward = 0
-        self.episode_step_count = 0
-
-        self.all_rewards = []
 
         # useful range is -1 .. +1, but spikes can be higher
         self.observation_space = spaces.Box(-np.inf,
@@ -153,29 +136,23 @@ class LunarLander(gym.Env, EzPickle):
         self.world.contactListener_keepref = ContactDetector(self)
         self.world.contactListener = self.world.contactListener_keepref
         self.game_over = False
-        self.landed = False
         self.prev_shaping = None
-        self.episode_step_count = 0
-        # print('Total reward last episode: %s' % self.previ_reward)
-        self.previ_reward = 0
 
         W = VIEWPORT_W/SCALE
         H = VIEWPORT_H/SCALE
 
         # terrain
         CHUNKS = 11
-        # height = self.np_random.uniform(0, H/2, size=(CHUNKS+1,))
-        height = [H / 4 if i < CHUNKS // 2 else 3 *
-                  H / 4 for i in range(CHUNKS + 1)]
+        height = self.np_random.uniform(0, H/2, size=(CHUNKS+1,))
         chunk_x = [W/(CHUNKS-1)*i for i in range(CHUNKS)]
-        self.helipad_x1 = chunk_x[CHUNKS-4]
-        self.helipad_x2 = chunk_x[CHUNKS-2]
-        self.helipad_y = H/2
-        height[CHUNKS-5] = self.helipad_y
-        height[CHUNKS-4] = self.helipad_y
-        height[CHUNKS-3] = self.helipad_y
-        height[CHUNKS-2] = self.helipad_y
-        height[CHUNKS-1] = self.helipad_y
+        self.helipad_x1 = chunk_x[CHUNKS//2-1]
+        self.helipad_x2 = chunk_x[CHUNKS//2+1]
+        self.helipad_y = H/4
+        height[CHUNKS//2-2] = self.helipad_y
+        height[CHUNKS//2-1] = self.helipad_y
+        height[CHUNKS//2+0] = self.helipad_y
+        height[CHUNKS//2+1] = self.helipad_y
+        height[CHUNKS//2+2] = self.helipad_y
         smooth_y = [0.33*(height[i-1] + height[i+0] + height[i+1])
                     for i in range(CHUNKS)]
 
@@ -194,11 +171,9 @@ class LunarLander(gym.Env, EzPickle):
         self.moon.color1 = (0.0, 0.0, 0.0)
         self.moon.color2 = (0.0, 0.0, 0.0)
 
-        # initial_y = VIEWPORT_H/SCALE
-        initial_y = smooth_y[2] + H / 15
-        initial_x = VIEWPORT_W/SCALE/5
+        initial_y = VIEWPORT_H/SCALE
         self.lander = self.world.CreateDynamicBody(
-            position=(initial_x, initial_y),
+            position=(VIEWPORT_W/SCALE/2, initial_y),
             angle=0.0,
             fixtures=fixtureDef(
                 shape=polygonShape(
@@ -211,16 +186,15 @@ class LunarLander(gym.Env, EzPickle):
         )
         self.lander.color1 = (0.5, 0.4, 0.9)
         self.lander.color2 = (0.3, 0.3, 0.5)
-        """
         self.lander.ApplyForceToCenter((
             self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM),
             self.np_random.uniform(-INITIAL_RANDOM, INITIAL_RANDOM)
         ), True)
-        """
+
         self.legs = []
         for i in [-1, +1]:
             leg = self.world.CreateDynamicBody(
-                position=(initial_x - i*LEG_AWAY/SCALE, initial_y),
+                position=(VIEWPORT_W/SCALE/2 - i*LEG_AWAY/SCALE, initial_y),
                 angle=(i * 0.05),
                 fixtures=fixtureDef(
                     shape=polygonShape(box=(LEG_W/SCALE, LEG_H/SCALE)),
@@ -284,7 +258,6 @@ class LunarLander(gym.Env, EzPickle):
             assert self.action_space.contains(
                 action), "%r (%s) invalid " % (action, type(action))
 
-        self.episode_step_count += 1
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0])
@@ -363,144 +336,20 @@ class LunarLander(gym.Env, EzPickle):
             - 100*abs(state[4]) + 10*state[6] + 10 * \
             state[7]  # And ten points for legs contact, the idea is if you
         # lose contact again after landing, you get negative reward
-        shaping_reward = 0
         if self.prev_shaping is not None:
-            shaping_reward = shaping - self.prev_shaping
+            reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
-        boost_reward = (m_power*0.03 + s_power*0.003) * -1
-        # reward -= m_power*0.03  # less fuel spent is better, about -30 for heuristic landing
-        # reward -= s_power*0.003
-
-        # Reward agent for getting closer to the pad
-        x_reward = 0
-        y_reward = 0
-
-        # x-axis
-        helipad_x = (self.helipad_x1 + self.helipad_x2) / 2
-        helipad_distance_x = abs(helipad_x - pos.x)
-        initial_distance_x = helipad_x - INITIAL_X_POS
-        normalizing_factor_x = math.sqrt(
-            AXIS_REWARD_MAX) / initial_distance_x
-        normalized_distance_x = helipad_distance_x * normalizing_factor_x
-        raw_x_reward = AXIS_REWARD_MAX - normalized_distance_x ** 2
-        x_reward += raw_x_reward * X_REWARD_FACTOR
-
-        # y-axis
-        helipad_distance_y = abs(self.helipad_y - pos.y)
-        initial_distance_y = self.helipad_y - INITIAL_Y_POS
-        normalizing_factor_y = math.sqrt(
-            AXIS_REWARD_MAX) / initial_distance_y
-        normalized_distance_y = helipad_distance_y * normalizing_factor_y
-        raw_y_reward = AXIS_REWARD_MAX - normalized_distance_y ** 2
-        y_reward += raw_y_reward * Y_REWARD_FACTOR
-
-        reward = shaping_reward - boost_reward + x_reward + y_reward
-
-        whole_second = self.episode_step_count % 60 == 0
-        # if self.previ_reward < -1000:
-        #     if whole_second:
-        #         print('reward before punish: %s' % reward)
+        reward -= m_power*0.30  # less fuel spent is better, about -30 for heuristic landing
+        reward -= s_power*0.03
 
         done = False
-
-        out_of_bounds = abs(
-            state[0]) >= 1.0 or pos.x < 0 or pos.x > 35 or pos.y > 35
-        failed = self.game_over or out_of_bounds
-        timeout = self.episode_step_count > 25 * 60
-
-        # success = not self.lander.awake
-        is_within_flags = pos.x > self.helipad_x1 and pos.x < self.helipad_x2
-
-        # if self.landed:
-        #     print('self.landed: True')
-        # if self.game_over:
-        #     print('self.game_over: True')
-        # if success:
-        #     print('success: True')
-        # print('pos.x %s' % pos.x)
-        # print('pos.y %s' % pos.y)
-
-        if failed or timeout:
+        if self.game_over or abs(state[0]) >= 1.0:
             done = True
             reward = -100
-        elif self.legs[0].ground_contact and self.legs[1].ground_contact:
+        if not self.lander.awake:
             done = True
-            reward = -100
-        elif is_within_flags:
-            if whole_second:
-                print('Within flags!')
-            reward += 50
-            if not self.lander.awake:
-                print('complete success (not awake)!')
-                reward = 1e6
-                done = True
-            elif self.landed:
-                print('complete success (landed)!')
-                reward = 1e6
-                done = True
-        elif self.landed:
-            done = True
-            reward = -100
-
-        # print()
-        # Fail if the lander lands outside success zone.
-        # This is questionable - being able to recover after landing might be useful. Makes training faster.
-        # elif self.landed:
-        #     # print('Landed')
-        #     reward -= 50
-        #     done = True
-        # elif pos.x < 0 or pos.x > 35 or pos.y > 35:  # Out of bounds
-        #     done = True
-        #     # print('Out of bounds')
-        #     reward -= 100
-        # elif self.game_over:  # Flipped
-        #     done = True
-        #     # print('Flipped')
-        #     reward -= 100
-        # elif self.episode_step_count > 25 * 60:
-        #     reward -= 100
-        #     # print('Timeout')
-        #     done = True
-        # else:
-
-            # if pos.x <= helipad_x:  # Climber is on the left side of helipad
-            #     x_reward = (pos.x - INITIAL_X_POS) * (AXIS_REWARD_MAX / 16)
-            # else:
-            #     x_reward = 50 - (pos.x - INITIAL_X_POS) * (AXIS_REWARD_MAX / 16)
-            # x_reward = 0
-
-            # print('pos x %s' % (pos.x))
-            # print('pos y %s' % (pos.y))
-            # print('self.helipad_x %s' % (helipad_x))
-            # print('self.helipad_y %s' % (self.helipad_y))
-            # print('Helipad x distance: %s' % (helipad_distance_x))
-            # print('helipad_distance_y %s' % (helipad_distance_y))
-
-        if self.previ_reward < -1000 and False:
-            if whole_second:
-                # print('shaping-reward: %s' % shaping_reward)
-                # print('boost-reward: %s' % boost_reward)
-                # print('x-reward: %s' % x_reward)
-                # print('y-reward: %s' % y_reward)
-                print('final reward: %s' % reward)
-                print('(x, y): (%s, %s)' % (pos.x, pos.y))
-                print('previ_reward: %s' % self.previ_reward)
-                print()
-
-            if abs(state[0]) >= 1.0:
-                print('abs state')
-            if pos.x < 0 or pos.x > 35 or pos.y > 35:
-                print('pos out')
-            if out_of_bounds:
-                print('out of bounds')
-            if self.game_over:
-                print('game over')
-            if self.landed:
-                print('landed')
-
-        self.all_rewards += [reward]
-        self.previ_reward += reward
+            reward = +100
         return np.array(state, dtype=np.float32), reward, done, {}
 
     def render(self, mode='human'):
@@ -548,15 +397,9 @@ class LunarLander(gym.Env, EzPickle):
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
 
     def close(self):
-        print('closing')
         if self.viewer is not None:
-            print('closing 2')
             self.viewer.close()
             self.viewer = None
-            # plt.plot(self.all_rewards)
-            # plt.ylabel('Reward')
-            # plt.show()
-            # plt.savefig('stats.png')
 
 
 class LunarLanderContinuous(LunarLander):
@@ -630,9 +473,9 @@ def demo_heuristic_lander(env, seed=None, render=False):
             if still_open == False:
                 break
 
-        # if steps % 20 == 0 or done:
-            # print("observations:", " ".join(["{:+0.2f}".format(x) for x in s]))
-            # print("step {} total_reward {:+0.2f}".format(steps, total_reward))
+        if steps % 20 == 0 or done:
+            print("observations:", " ".join(["{:+0.2f}".format(x) for x in s]))
+            print("step {} total_reward {:+0.2f}".format(steps, total_reward))
         steps += 1
         if done:
             break

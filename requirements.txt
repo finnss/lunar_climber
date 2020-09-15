@@ -1,7 +1,7 @@
 gym
 stable-baselines
-tensorflow==1.15.0
-# tensorflow-gpu
+#tensorflow==1.15.0
+tensorflow-gpu==1.15.0
 # PySimpleGUI
 # python-chess
 Pyperclip
@@ -15,6 +15,7 @@ rlcard >= 0.2.1
 pynput
 opencv-python
 box2d-py
+argparse
 # python-shogi
 # hanabi_learning_environment
 # multi_agent_ale_py
