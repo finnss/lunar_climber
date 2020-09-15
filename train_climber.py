@@ -12,19 +12,21 @@ import os
 
 
 def train(algorithm='dqn', timesteps=2e5):
-    # env = gym.make('LunarLander-v2')
-    print('algorithm', algorithm)
-    print('timesteps', timesteps)
+    # env = gym.make('LunarLander-v2')  # This uses the library version of the Lunar Lander env.
+    print('algorithm: ', algorithm)
+    print('timesteps: ', timesteps)
+
+    learning_rate = 0.001
 
     if algorithm.lower() == 'dqn':
         env = LunarLander()
-        model = DQN('MlpPolicy', env, learning_rate=0.001,
+        model = DQN('MlpPolicy', env, learning_rate=learning_rate,
                     prioritized_replay=True,
                     verbose=1)
     elif algorithm.lower() == 'ppo2':
         n_envs = 4
         env = SubprocVecEnv([lambda: LunarLander() for i in range(n_envs)])
-        model = PPO2('MlpPolicy', env, learning_rate=0.0001,
+        model = PPO2('MlpPolicy', env, learning_rate=learning_rate,
                      verbose=1)
     else:
         raise RuntimeError("Unknown algorithm. %s" % algorithm)

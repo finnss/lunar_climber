@@ -368,9 +368,10 @@ class LunarLander(gym.Env, EzPickle):
             shaping_reward = shaping - self.prev_shaping
         self.prev_shaping = shaping
 
-        boost_reward = (m_power*0.03 + s_power*0.003) * -1
         # reward -= m_power*0.03  # less fuel spent is better, about -30 for heuristic landing
-        # reward -= s_power*0.003
+        boost_reward = (m_power*0.03 + s_power*0.003) * -1
+
+        # START Finn's reward code
 
         # Reward agent for getting closer to the pad
         x_reward = 0
@@ -397,34 +398,17 @@ class LunarLander(gym.Env, EzPickle):
 
         reward = shaping_reward - boost_reward + x_reward + y_reward
 
-        whole_second = self.episode_step_count % 60 == 0
-        # if self.previ_reward < -1000:
-        #     if whole_second:
-        #         print('reward before punish: %s' % reward)
-
         done = False
 
         out_of_bounds = abs(
             state[0]) >= 1.0 or pos.x < 0 or pos.x > 35 or pos.y > 35
-        failed = self.game_over or out_of_bounds
         timeout = self.episode_step_count > 25 * 60
+        failed = self.game_over or out_of_bounds or timeout
 
-        # success = not self.lander.awake
         is_within_flags = pos.x > self.helipad_x1 and pos.x < self.helipad_x2
+        whole_second = self.episode_step_count % 60 == 0
 
-        # if self.landed:
-        #     print('self.landed: True')
-        # if self.game_over:
-        #     print('self.game_over: True')
-        # if success:
-        #     print('success: True')
-        # print('pos.x %s' % pos.x)
-        # print('pos.y %s' % pos.y)
-
-        if failed or timeout:
-            done = True
-            reward = -100
-        elif self.legs[0].ground_contact and self.legs[1].ground_contact:
+        if failed:
             done = True
             reward = -100
         elif is_within_flags:
@@ -432,75 +416,26 @@ class LunarLander(gym.Env, EzPickle):
                 print('Within flags!')
             reward += 50
             if not self.lander.awake:
+                # This "awake" check is what the original env used
                 print('complete success (not awake)!')
+                # 1 million reward, as an experiment. The cummulative reward of simply being near the flag for every frame for a long time reached several tens of thousand,
+                # disincentivizing actually landing (is my theory, anyway).
                 reward = 1e6
                 done = True
             elif self.landed:
                 print('complete success (landed)!')
                 reward = 1e6
                 done = True
-        elif self.landed:
+        elif self.landed or self.legs[0].ground_contact and self.legs[1].ground_contact:
+            # Punish any leg contact that is not within the flags
             done = True
             reward = -100
 
-        # print()
-        # Fail if the lander lands outside success zone.
-        # This is questionable - being able to recover after landing might be useful. Makes training faster.
-        # elif self.landed:
-        #     # print('Landed')
-        #     reward -= 50
-        #     done = True
-        # elif pos.x < 0 or pos.x > 35 or pos.y > 35:  # Out of bounds
-        #     done = True
-        #     # print('Out of bounds')
-        #     reward -= 100
-        # elif self.game_over:  # Flipped
-        #     done = True
-        #     # print('Flipped')
-        #     reward -= 100
-        # elif self.episode_step_count > 25 * 60:
-        #     reward -= 100
-        #     # print('Timeout')
-        #     done = True
-        # else:
-
-            # if pos.x <= helipad_x:  # Climber is on the left side of helipad
-            #     x_reward = (pos.x - INITIAL_X_POS) * (AXIS_REWARD_MAX / 16)
-            # else:
-            #     x_reward = 50 - (pos.x - INITIAL_X_POS) * (AXIS_REWARD_MAX / 16)
-            # x_reward = 0
-
-            # print('pos x %s' % (pos.x))
-            # print('pos y %s' % (pos.y))
-            # print('self.helipad_x %s' % (helipad_x))
-            # print('self.helipad_y %s' % (self.helipad_y))
-            # print('Helipad x distance: %s' % (helipad_distance_x))
-            # print('helipad_distance_y %s' % (helipad_distance_y))
-
-        if self.previ_reward < -1000 and False:
-            if whole_second:
-                # print('shaping-reward: %s' % shaping_reward)
-                # print('boost-reward: %s' % boost_reward)
-                # print('x-reward: %s' % x_reward)
-                # print('y-reward: %s' % y_reward)
-                print('final reward: %s' % reward)
-                print('(x, y): (%s, %s)' % (pos.x, pos.y))
-                print('previ_reward: %s' % self.previ_reward)
-                print()
-
-            if abs(state[0]) >= 1.0:
-                print('abs state')
-            if pos.x < 0 or pos.x > 35 or pos.y > 35:
-                print('pos out')
-            if out_of_bounds:
-                print('out of bounds')
-            if self.game_over:
-                print('game over')
-            if self.landed:
-                print('landed')
-
         self.all_rewards += [reward]
         self.previ_reward += reward
+
+        # END Finn's reward code
+
         return np.array(state, dtype=np.float32), reward, done, {}
 
     def render(self, mode='human'):
