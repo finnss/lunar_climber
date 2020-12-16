@@ -47,7 +47,7 @@ SIDE_ENGINE_POWER = 0.6
 INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
 INITIAL_X_POS = 8
-INITIAL_Y_POS = 8
+INITIAL_Y_POS = 7.15
 
 X_REWARD_FACTOR = 30
 Y_REWARD_FACTOR = 20
@@ -344,11 +344,26 @@ class LunarLander(gym.Env, EzPickle):
 
         pos = self.lander.position
         vel = self.lander.linearVelocity
+
+        # Old reward system (towards center)
+        # x_distance = (pos.x - VIEWPORT_W/SCALE/2) / (VIEWPORT_W/SCALE/2)
+        # y_distance = (pos.y - (self.helipad_y+LEG_DOWN/SCALE)) / (VIEWPORT_H/SCALE/2),
+        # x_speed =  vel.x*(VIEWPORT_W/SCALE/2)/FPS,
+        # y_speed =  vel.y*(VIEWPORT_H/SCALE/2)/FPS,
+
+        # New reward system
+        x_goal = (self.helipad_x1 + self.helipad_x2) / 2
+        y_goal = self.helipad_y
+        x_distance = (pos.x - x_goal) / (x_goal)
+        y_distance = (pos.y - y_goal) / (y_goal)
+        x_speed = vel.x * (x_goal) / FPS
+        y_speed = vel.y * (y_goal) / FPS
+
         state = [
-            (pos.x - VIEWPORT_W/SCALE/2) / (VIEWPORT_W/SCALE/2),
-            (pos.y - (self.helipad_y+LEG_DOWN/SCALE)) / (VIEWPORT_H/SCALE/2),
-            vel.x*(VIEWPORT_W/SCALE/2)/FPS,
-            vel.y*(VIEWPORT_H/SCALE/2)/FPS,
+            x_distance,
+            y_distance,
+            x_speed,
+            y_speed,
             self.lander.angle,
             20.0*self.lander.angularVelocity/FPS,
             1.0 if self.legs[0].ground_contact else 0.0,
@@ -357,10 +372,11 @@ class LunarLander(gym.Env, EzPickle):
         assert len(state) == 8
 
         reward = 0
+
         shaping = \
             - 100*np.sqrt(state[0]*state[0] + state[1]*state[1]) \
             - 100*np.sqrt(state[2]*state[2] + state[3]*state[3]) \
-            - 100*abs(state[4]) + 10*state[6] + 10 * \
+            - 10*abs(state[4]) + 10*state[6] + 10 * \
             state[7]  # And ten points for legs contact, the idea is if you
         # lose contact again after landing, you get negative reward
         shaping_reward = 0
@@ -377,7 +393,8 @@ class LunarLander(gym.Env, EzPickle):
         x_reward = 0
         y_reward = 0
 
-        # x-axis
+        # # x-axis
+
         helipad_x = (self.helipad_x1 + self.helipad_x2) / 2
         helipad_distance_x = abs(helipad_x - pos.x)
         initial_distance_x = helipad_x - INITIAL_X_POS
@@ -387,25 +404,39 @@ class LunarLander(gym.Env, EzPickle):
         raw_x_reward = AXIS_REWARD_MAX - normalized_distance_x ** 2
         x_reward += raw_x_reward * X_REWARD_FACTOR
 
-        # y-axis
+        # # y-axis
         helipad_distance_y = abs(self.helipad_y - pos.y)
-        initial_distance_y = self.helipad_y - INITIAL_Y_POS
+        initial_distance_y = abs(self.helipad_y - INITIAL_Y_POS)
         normalizing_factor_y = math.sqrt(
             AXIS_REWARD_MAX) / initial_distance_y
         normalized_distance_y = helipad_distance_y * normalizing_factor_y
         raw_y_reward = AXIS_REWARD_MAX - normalized_distance_y ** 2
         y_reward += raw_y_reward * Y_REWARD_FACTOR
 
+        distance_reward = np.sqrt(x_reward ** 2 + y_reward ** 2)
+
+        MAX_ANGLE_REWARD = 50
+        angle = MAX_ANGLE_REWARD - abs(self.lander.angle) * 50
+        angle_speed_reward = 20.0 * self.lander.angularVelocity/FPS,
+        # angle_reward = angle + angle_speed_reward
+
         whole_second = self.episode_step_count % 60 == 0
         if whole_second:
-            print('Y dist: %s, reward: %s', (pos.y - self.helipad_y, y_reward))
-
-        reward = shaping_reward - boost_reward + x_reward + y_reward
+            a = 1
+            # print('x_dist: %s, y_dist: %s' %
+            #       (helipad_distance_x, helipad_distance_y))
+            # print('angle', self.lander.angle)
+            # print('angular speed', 20.0*self.lander.angularVelocity/FPS)
+            # print('x reward', x_reward)
+            # print('y reward', y_reward)
+            # print('distance reward', distance_reward)
+            # print('angle reward', angle_reward)
+        reward = shaping_reward - boost_reward
+        # reward = angle_reward + distance_reward
 
         done = False
 
-        out_of_bounds = abs(
-            state[0]) >= 1.0 or pos.x < 0 or pos.x > 35 or pos.y > 35
+        out_of_bounds = pos.x < 0 or pos.x > 35 or pos.y > 35
         timeout = self.episode_step_count > 25 * 60
         failed = self.game_over or out_of_bounds or timeout
 
@@ -417,7 +448,7 @@ class LunarLander(gym.Env, EzPickle):
         elif is_within_flags:
             if whole_second:
                 print('Within flags!')
-            reward += 50
+            # reward += 50
             if not self.lander.awake:
                 # This "awake" check is what the original env used
                 print('complete success (not awake)!')

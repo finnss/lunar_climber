@@ -9,9 +9,11 @@ from stable_baselines.common.evaluation import evaluate_policy
 import matplotlib.pyplot as plt
 from datetime import datetime
 import os
+from stable_baselines.common.schedules import LinearSchedule, get_schedule_fn
 
 
 def train(algorithm='dqn', timesteps=2e5):
+
     # env = gym.make('LunarLander-v2')  # This uses the library version of the Lunar Lander env.
     print('algorithm: ', algorithm)
     print('timesteps: ', timesteps)
@@ -26,7 +28,9 @@ def train(algorithm='dqn', timesteps=2e5):
     elif algorithm.lower() == 'ppo2':
         n_envs = 4
         env = SubprocVecEnv([lambda: LunarLander() for i in range(n_envs)])
-        model = PPO2('MlpPolicy', env, learning_rate=learning_rate,
+
+        schedule = LinearSchedule(int(float(timesteps)), 0.00001, 0.1).value
+        model = PPO2('MlpPolicy', env, learning_rate=schedule,
                      verbose=1)
     else:
         raise RuntimeError("Unknown algorithm. %s" % algorithm)

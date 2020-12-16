@@ -1,6 +1,6 @@
 # Use the official image as a parent image.
 FROM nvidia/cuda:10.2-base
-# CMD nvidia-smi
+CMD nvidia-smi
 
 # Set the working directory.
 WORKDIR /opt/ml/code/
